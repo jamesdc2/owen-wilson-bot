@@ -1,13 +1,29 @@
-FROM node:latest
+# build
+FROM node:18-alpine AS builder
 
-# Create the bot's directory
-RUN mkdir -p /usr/src/bot
+# Create app directory
 WORKDIR /usr/src/bot
 
-COPY package.json /usr/src/bot
-RUN npm install
+# Copy package.json and package-lock.json
+COPY package*.json ./
 
-COPY . /usr/src/bot
+# Install all dependencies (dev + prod) for building
+RUN npm ci
 
-# Start the bot.
+# Copy the rest of the source code
+COPY . .
+
+# create runtime
+FROM node:18-alpine
+
+WORKDIR /usr/src/bot
+
+# Copy only production dependencies
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy built files from builder stage (or source if JS)
+COPY --from=builder /usr/src/bot .
+
+# Start the bot
 CMD ["node", "oh-wow.js"]
