@@ -1,1 +1,0 @@
-worker: node oh-wow.js
