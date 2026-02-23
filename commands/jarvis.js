@@ -102,7 +102,8 @@ module.exports = {
                 ))
                 .catch(console.error);
         } catch(err) {
-            message.channel.send(err.message);
+            message.channel.send("🤢");
+            message.channel.send(err.stack);
             message.channel.send('Something messed up');
         }
     }
