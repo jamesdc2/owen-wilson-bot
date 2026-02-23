@@ -4,12 +4,15 @@ const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const API_KEY = process.env.OPENROUTER_TOKEN;
 const MODEL = process.env.MODEL;
 
+const conversations = new Map();
+const MAX_MESSAGES = 10;
+
 module.exports = {
     name: 'jarvis',
     description: '',
     async execute(message) {
-        console.log(API_KEY);
-        console.log(MODEL);
+
+        const userId = message.author.id;
         const prompt = message.content
             .split(' ')
             .slice(1)
@@ -19,6 +22,17 @@ module.exports = {
         if (!prompt) {
             return message.channel.send('No prompt');
         }
+
+        let history = conversations.get(userId) || []
+        history.push({
+            role: "user",
+            content: prompt
+        });
+
+        if (history.length > MAX_MESSAGES) {
+            history = history.slice(-MAX_MESSAGES);
+        }
+
         try {
 
             const thinking = await message.reply("🤔 Thinking...");
@@ -49,7 +63,8 @@ module.exports = {
                         {
                             role: 'user',
                             content: prompt
-                        }
+                        },
+                        ...history
                     ]
                 })
             });
@@ -68,6 +83,17 @@ module.exports = {
             if (answer.length > 2000) {
                 answer = answer.slice(0, 1950) + '...';
             }
+
+            history.push({
+                role: "assistant",
+                content: answer
+            });
+
+            if (history.length > MAX_MESSAGES) {
+                history = history.slice(-MAX_MESSAGES);
+            }
+
+            conversations.set(userId, history);
 
             thinking.edit(answer)
                 .then(() => 
