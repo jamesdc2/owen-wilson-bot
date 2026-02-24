@@ -30,7 +30,7 @@ module.exports = {
         });
 
         if (history.length > MAX_MESSAGES) {
-            history = history.slice(-MAX_MESSAGES);
+            history.shift();
         }
 
         try {
@@ -90,10 +90,11 @@ module.exports = {
             });
 
             if (history.length > MAX_MESSAGES) {
-                history = history.slice(-MAX_MESSAGES);
+                history.shift();
             }
 
             conversations.set(userId, history);
+            console.log(history);
 
             thinking.edit(answer)
                 .then(() => 
