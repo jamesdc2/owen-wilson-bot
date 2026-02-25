@@ -29,6 +29,17 @@ keywords.forEach((item) => {
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag} at ${moment().format()}!`)
+    try {
+        const targetChannel = process.env.STARTUP_CHANNEL;
+        const channel = client.channels.cache.find(c => c.name === targetChannel);
+        if (channel) {
+            channel.send("🤖 I am online!");
+        } else {
+            console.log("Could not find #general channel");
+        }
+    } catch (err) {
+        console.error("Failed to send startup message:", err);
+    }
 });
 
 client.on('message', message => {
