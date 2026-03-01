@@ -2,14 +2,14 @@
   "name": "owenwilsonbot",
   "version": "1.0.0",
   "description": "a really cool bot",
-  "main": "oh-wow.js",
+  "main": "dist/oh-wow.js",
   "engines": {
     "node": "23.11.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node oh-wow.js",
-    "debug": "node --nolazy --inspect-brk=9229 oh-wow.js"
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
   },
   "repository": {
     "type": "git",
@@ -23,11 +23,16 @@
   },
   "homepage": "https://github.com/jamesdc2/owenwilsonbot#readme",
   "dependencies": {
-    "discord.js": "^12.5.1",
     "dotenv": "^8.6.0",
     "googleapis": "^71.0.0",
     "moment": "^2.29.4",
     "request": "^2.88.2",
     "ytdl-core": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "discord.js": "^14.25.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }
