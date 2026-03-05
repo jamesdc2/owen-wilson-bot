@@ -13,7 +13,7 @@ const prefix = process.env.PREFIX;
 const client = new Client();
 client.commands = new Discord.Collection();
 
-const commandFiles = fs.readdirSync('./commands').filter(files => files.endsWith('.js'));
+const commandFiles = fs.readdirSync('./commands/legacy').filter(files => files.endsWith('.js'));
 
 for (const file of commandFiles) {
 	const command = require(`./commands/${file}`);
