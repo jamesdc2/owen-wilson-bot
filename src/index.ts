@@ -1,5 +1,6 @@
 import CustomClient from './client';
 import Bot from './bot/Bot';
+import { MessageHandler, ReactionHandler } from './events';
 
 export async function start(): Promise<void> {
     const token = process.env.DISCORD_TOKEN;
@@ -17,7 +18,9 @@ export async function start(): Promise<void> {
 
     const bot = new Bot(
         client,
-        token
+        token,
+        new MessageHandler(),
+        new ReactionHandler()        
     );
 
     await bot.start();
