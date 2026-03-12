@@ -1,17 +1,12 @@
-import CustomClient from '../client';
-import { Message } from 'discord.js';
-
-interface Run {
-    (client: CustomClient, message: Message, args: string[]);
-}
+import { Message, SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 
 export interface Command {
-    name: string,
-    aliases?: string[],
-    category: string,
-    description: string,
-    usage: string,
-    website: string,
-    run: Run,
-    slice?(arg0: number)
+    name: string;
+    description: string;
+    // Slash command builder — required when registering with Discord
+    builder?: SlashCommandBuilder;
+    // Legacy prefix handler
+    execute?: (message: Message, args?: string[]) => Promise<void>;
+    // Slash command handler
+    interaction?: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }

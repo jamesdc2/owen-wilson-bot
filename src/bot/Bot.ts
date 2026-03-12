@@ -7,17 +7,12 @@ import {
     PartialMessageReaction,
     User
 } from 'discord.js';
-import * as dotenv from 'dotenv';
 
 import { MessageHandler, ReactionHandler } from '../events';
-import { Command } from '../commands'
+import { legacyCommands } from '../commands/legacy'
 
-dotenv.config();
 
 export default class Bot {
-    private ready = false;
-    public commands: Collection<string, Command> = new Collection();
-
     constructor(
         private client: Client,
         private token: string,
@@ -32,25 +27,24 @@ export default class Bot {
             (msgReaction: MessageReaction | PartialMessageReaction, user: User) =>
                 this.onReaction(msgReaction, user)
             );
+
+        this.messageHandler.registerCommands(legacyCommands);
         
         await this.login(this.token);
     }
 
     private async login(token: string): Promise<void> {
-        try {
-            await this.client.login(token);
-        } catch (error) {
-            console.error(error);
-            return;
-        }
+        await this.client.login(token);
     }
 
     private async onMessage(msg: Message): Promise<void> {
-        if ( !this.ready ) return;
+        if (!this.client.isReady()) return;
         try {
             await this.messageHandler.process(msg);
+        } catch ( error )
+        {
+            console.error(error);
         }
-
     }
 
     private async onReaction(
@@ -61,8 +55,6 @@ export default class Bot {
     }
 
     private async onReady(): Promise<void> {
-        let userTag = this.client.user?.tag;
-        console.log(`Client logged in as '${userTag}'.`)
-        this.ready = true;
+        console.log(`Client logged in as '${this.client.user!.tag}'.`)
     }
 }

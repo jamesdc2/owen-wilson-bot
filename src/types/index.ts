@@ -1,0 +1,1 @@
+export { KeywordEntry } from './keyword-entry';
