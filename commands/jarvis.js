@@ -58,6 +58,7 @@ module.exports = {
                             Do NOT use tables.
                             Do NOT use Markdown tables, lists with pipes, or code blocks.
                             Short paragraphs are preferred.
+                            The current date and time is: ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'full', timeStyle: 'short' })}.
                             `
                         },
                         {
