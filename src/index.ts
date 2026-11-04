@@ -30,10 +30,13 @@ export async function start(): Promise<void> {
 
     const prefix = config.prefix ?? '!';
 
+    const keywords = loadKeywords();
+    console.log(`Prefix "${prefix}", ${keywords.length} keywords loaded`);
+
     const bot = new Bot(
         client,
         token,
-        new MessageHandler(loadKeywords(), prefix),
+        new MessageHandler(keywords, prefix),
         new ReactionHandler()        
     );
 
