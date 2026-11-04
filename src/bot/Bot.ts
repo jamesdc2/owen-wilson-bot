@@ -10,7 +10,7 @@ import {
     User
 } from 'discord.js';
 
-import { InteractionHandler, MessageHandler, ReactionHandler } from '../events';
+import { InteractionHandler, MentionHandler, MessageHandler, ReactionHandler } from '../events';
 import { commands } from '../commands';
 
 
@@ -19,6 +19,7 @@ export default class Bot {
         private client: Client,
         private token: string,
         private messageHandler: MessageHandler,
+        private mentionHandler: MentionHandler,
         private interactionHandler: InteractionHandler,
         private reactionHandler: ReactionHandler,
         /** Register slash commands to this server only (instant); omit for global. */
@@ -45,6 +46,11 @@ export default class Bot {
     private async onMessage(msg: Message): Promise<void> {
         if (!this.client.isReady()) return;
         try {
+            // @mentions go to the AI chat instead of commands/keywords. Other bots are ignored to avoid loops.
+            if (!msg.system && !msg.author.bot && this.mentionHandler.isMention(msg)) {
+                await this.mentionHandler.process(msg);
+                return;
+            }
             await this.messageHandler.process(msg);
         } catch ( error )
         {

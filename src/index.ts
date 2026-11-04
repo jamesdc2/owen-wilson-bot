@@ -4,7 +4,7 @@ import { resolve } from 'path';
 import { Partials } from 'discord.js';
 import CustomClient from './client';
 import Bot from './bot/Bot';
-import { InteractionHandler, MessageHandler, ReactionHandler } from './events';
+import { InteractionHandler, MentionHandler, MessageHandler, ReactionHandler } from './events';
 import config  from './config';
 import { KeywordEntry } from './types';
 
@@ -40,6 +40,7 @@ export async function start(): Promise<void> {
         client,
         token,
         new MessageHandler(keywords, prefix),
+        new MentionHandler(),
         new InteractionHandler(),
         new ReactionHandler(),
         config.discord.guildId
