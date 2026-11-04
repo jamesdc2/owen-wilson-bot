@@ -23,10 +23,11 @@ export class MessageHandler implements EventHandler {
         this.commands.set(command.name, command);
     }
 
+    /** Only commands with an `execute` handler respond to the prefix. */
     registerCommands(commands: Command[]): void {
         commands
-            .map( cmd => ({ key: cmd.name, value: cmd}))
-            .forEach(({ key, value}) => this.commands.set(key, value));
+            .filter(cmd => cmd.execute)
+            .forEach(cmd => this.commands.set(cmd.name, cmd));
     }
 
     public async process(msg: Message): Promise<void> {

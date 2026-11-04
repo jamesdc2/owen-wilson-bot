@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import CustomClient from './client';
 import Bot from './bot/Bot';
-import { MessageHandler, ReactionHandler } from './events';
+import { InteractionHandler, MessageHandler, ReactionHandler } from './events';
 import config  from './config';
 import { KeywordEntry } from './types';
 
@@ -37,7 +37,9 @@ export async function start(): Promise<void> {
         client,
         token,
         new MessageHandler(keywords, prefix),
-        new ReactionHandler()        
+        new InteractionHandler(),
+        new ReactionHandler(),
+        config.discord.guildId
     );
 
     await bot.start();

@@ -2,14 +2,15 @@ import {
     Client,
     Collection,
     Events,
+    Interaction,
     Message,
     MessageReaction,
     PartialMessageReaction,
     User
 } from 'discord.js';
 
-import { MessageHandler, ReactionHandler } from '../events';
-import { legacyCommands } from '../commands/legacy'
+import { InteractionHandler, MessageHandler, ReactionHandler } from '../events';
+import { commands } from '../commands';
 
 
 export default class Bot {
@@ -17,19 +18,24 @@ export default class Bot {
         private client: Client,
         private token: string,
         private messageHandler: MessageHandler,
-        private reactionHandler: ReactionHandler
+        private interactionHandler: InteractionHandler,
+        private reactionHandler: ReactionHandler,
+        /** Register slash commands to this server only (instant); omit for global. */
+        private guildId?: string
     ) {}
 
     public async start(): Promise<void> {
         this.client.on(Events.ClientReady, () => this.onReady());
         this.client.on(Events.MessageCreate, (msg: Message) => this.onMessage(msg));
+        this.client.on(Events.InteractionCreate, (i: Interaction) => this.onInteraction(i));
         this.client.on(Events.MessageReactionAdd,
             (msgReaction: MessageReaction | PartialMessageReaction, user: User) =>
                 this.onReaction(msgReaction, user)
             );
 
-        this.messageHandler.registerCommands(legacyCommands);
-        
+        this.messageHandler.registerCommands(commands);
+        this.interactionHandler.registerCommands(commands);
+
         await this.login(this.token);
     }
 
@@ -47,6 +53,14 @@ export default class Bot {
         }
     }
 
+    private async onInteraction(interaction: Interaction): Promise<void> {
+        try {
+            await this.interactionHandler.process(interaction);
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
     private async onReaction(
         msgReaction: MessageReaction | PartialMessageReaction,
         reactor: User
@@ -56,5 +70,13 @@ export default class Bot {
 
     private async onReady(): Promise<void> {
         console.log(`Client logged in as '${this.client.user!.tag}'.`)
+
+        if (!this.client.isReady()) return;
+        try {
+            await this.interactionHandler.deploy(this.client, this.guildId);
+        } catch (error) {
+            // Keep running: prefix commands and keywords still work without slash commands.
+            console.error('Failed to register slash commands:', error);
+        }
     }
 }

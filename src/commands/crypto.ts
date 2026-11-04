@@ -1,6 +1,6 @@
 import { TextChannel } from 'discord.js';
-import { Command } from '..';
-import { fetchPrices } from '../../services/cryptocompare';
+import { Command } from './command';
+import { fetchPrices } from '../services/cryptocompare';
 
 const crypto: Command = {
     name: 'crypto',
