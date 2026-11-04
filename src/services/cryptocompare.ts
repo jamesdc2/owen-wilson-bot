@@ -1,4 +1,4 @@
-const BASE_URL = 'https://min-api.cryptocompare.com/data';
+import config  from '../config';
 
 interface PriceResponse {
     symbol: string,
@@ -8,5 +8,17 @@ interface PriceResponse {
 }
 
 async function fetchPrices(): Promise<PriceResponse[]> {
-    return null;
+    const syms = ["ETH", "DOGE", "FARTCOIN", "TRUMP"]
+    
+    const res = await fetch(`${config.cryptoCompare.baseUrl}/pricemultifull?fsyms=${syms.join(',')}&tysms=USD`, {
+        headers: {
+            Authorization: `Apikey ${config.cryptoCompare.apiKey}`,
+        },
+    });
+
+    if (!res.ok) {
+        throw new Error()
+    }
+
+    return res.json() as Promise<PriceResponse[]>;
 }

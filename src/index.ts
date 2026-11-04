@@ -1,13 +1,10 @@
 import * as dotenv from 'dotenv';
-import { readdirSync } from 'fs';
-import { join } from 'path';
-
 import CustomClient from './client';
 import Bot from './bot/Bot';
-import { Command } from './commands'
 import { MessageHandler, ReactionHandler } from './events';
+import config  from './config';
 
-import keywords from './config/keywords.json';
+import keywords from '../config/keywords.json';
 
 dotenv.config();
 
@@ -26,7 +23,7 @@ export async function start(): Promise<void> {
             "MessageContent"]
     });
 
-    const prefix = process.env.PREFIX ?? '!';
+    const prefix = config.prefix ?? '!';
 
     const bot = new Bot(
         client,
