@@ -13,7 +13,12 @@ const config = {
     openRouter: {
       baseUrl: 'https://openrouter.ai/api/v1',
       apiKey: process.env.OPENROUTER_TOKEN,
+      /** Text replies. */
       model: process.env.MODEL,
+      /** Small, cheap model that picks which skill handles a mention. Unset → always chat. */
+      routerModel: process.env.ROUTER_MODEL || undefined,
+      /** Image generation skill. */
+      imageModel: process.env.IMAGE_MODEL || undefined,
     },
   };
 

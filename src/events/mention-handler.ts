@@ -1,6 +1,7 @@
 import { Message } from 'discord.js';
 import { EventHandler } from './event-handler';
 import { ChatMessage, chatCompletion, isOpenRouterConfigured } from '../services/openrouter';
+import { RouteDecision, routeMessage, skills } from '../skills';
 
 const SYSTEM_PROMPT = `You are a Discord bot.
 Respond in plain text or very simple Markdown only.
@@ -46,29 +47,71 @@ export class MentionHandler implements EventHandler {
         const thinking = await message.reply('🤔 Thinking...');
 
         const history = this.conversations.get(message.author.id) ?? [];
-        const userTurn: ChatMessage = { role: 'user', content: prompt };
 
         try {
-            let answer = await chatCompletion([
-                { role: 'system', content: SYSTEM_PROMPT },
-                ...history,
-                userTurn,
-            ]);
+            const decision = await this.route(prompt, history, message);
 
-            if (answer.length > DISCORD_MAX_LENGTH) {
-                answer = answer.slice(0, 1950) + '...';
+            if (decision.kind === 'chat') {
+                const answer = await this.chat(prompt, history);
+                await thinking.edit(answer);
+                this.remember(message.author.id, history, prompt, answer);
+                log(`answered (${answer.length} chars)`, message);
+                return;
             }
 
-            // Only remember turns that got an answer, so a failed request doesn't skew context.
-            history.push(userTurn, { role: 'assistant', content: answer });
-            this.conversations.set(message.author.id, history.slice(-MAX_MESSAGES));
+            const { skill, args } = decision;
+            if (skill.progressMessage) await thinking.edit(skill.progressMessage);
 
-            await thinking.edit(answer);
-            log(`answered (${answer.length} chars)`, message);
+            const result = await skill.run(args, { message, prompt });
+
+            if (result.type === 'reply') {
+                await thinking.edit({ content: result.content, files: result.files ?? [] });
+                this.remember(message.author.id, history, prompt, result.summary);
+            } else {
+                // Let the chat model phrase the skill's data in the bot's own voice.
+                const answer = await this.chat(prompt, history, `Result from ${skill.name}:\n${result.data}`);
+                await thinking.edit(answer);
+                this.remember(message.author.id, history, prompt, answer);
+            }
+            log(`${skill.name} done`, message);
         } catch (err) {
-            console.error(`${new Date().toISOString()} [mention] AI chat failed:`, err);
+            console.error(`${new Date().toISOString()} [mention] failed:`, err);
             await thinking.edit('🤢 Something messed up.').catch(() => {});
         }
+    }
+
+    /** Picks chat vs. a skill. Router failures fall back to chat rather than failing the reply. */
+    private async route(prompt: string, history: ChatMessage[], message: Message): Promise<RouteDecision> {
+        try {
+            const decision = await routeMessage(prompt, history, skills);
+            if (decision.kind === 'chat') {
+                log(`[router] chat (${decision.reason})`, message);
+            } else {
+                log(`[router] ${decision.skill.name} ${JSON.stringify(decision.args)}`, message);
+            }
+            return decision;
+        } catch (err) {
+            console.error(`${new Date().toISOString()} [mention] [router] failed, falling back to chat:`, err);
+            return { kind: 'chat', reason: 'router error' };
+        }
+    }
+
+    /** Asks the chat model (MODEL) for a reply, optionally with extra context from a skill. */
+    private async chat(prompt: string, history: ChatMessage[], skillContext?: string): Promise<string> {
+        const answer = await chatCompletion([
+            { role: 'system', content: SYSTEM_PROMPT },
+            ...history,
+            { role: 'user', content: prompt },
+            ...(skillContext ? [{ role: 'system' as const, content: skillContext }] : []),
+        ]);
+
+        return answer.length > DISCORD_MAX_LENGTH ? answer.slice(0, 1950) + '...' : answer;
+    }
+
+    /** Only successful turns are remembered, so a failed request doesn't skew context. */
+    private remember(userId: string, history: ChatMessage[], prompt: string, reply: string): void {
+        history.push({ role: 'user', content: prompt }, { role: 'assistant', content: reply });
+        this.conversations.set(userId, history.slice(-MAX_MESSAGES));
     }
 
     /** Removes the bot's user and role mentions so only the actual question is sent to the model. */
