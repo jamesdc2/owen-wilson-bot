@@ -7,10 +7,10 @@ interface PriceResponse {
     percentChange: number
 }
 
-async function fetchPrices(): Promise<PriceResponse[]> {
+export async function fetchPrices(): Promise<PriceResponse[]> {
     const syms = ["ETH", "DOGE", "FARTCOIN", "TRUMP"]
     
-    const res = await fetch(`${config.cryptoCompare.baseUrl}/pricemultifull?fsyms=${syms.join(',')}&tysms=USD`, {
+    const res = await fetch(`${config.cryptoCompare.baseUrl}/pricemultifull?fsyms=${syms.join(',')}&tsyms=USD`, {
         headers: {
             Authorization: `Apikey ${config.cryptoCompare.apiKey}`,
         },

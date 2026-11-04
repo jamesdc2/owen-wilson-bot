@@ -1,29 +1,25 @@
-# build
-FROM node:18-alpine AS builder
-
-# Create app directory
+# ---- build: compile TypeScript ----
+FROM node:24-alpine AS builder
 WORKDIR /usr/src/bot
 
-# Copy package.json and package-lock.json
 COPY package*.json ./
-
-# Install all dependencies (dev + prod) for building
 RUN npm ci
 
-# Copy the rest of the source code
-COPY . .
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build
 
-# create runtime
-FROM node:18-alpine
-
+# ---- runtime: production deps + compiled output only ----
+FROM node:24-alpine
 WORKDIR /usr/src/bot
+ENV NODE_ENV=production
 
-# Copy only production dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Copy built files from builder stage (or source if JS)
-COPY --from=builder /usr/src/bot .
+COPY --from=builder /usr/src/bot/dist ./dist
+# Keyword list is read at runtime; mount over /usr/src/bot/config to change it without rebuilding.
+COPY config ./config
 
-# Start the bot
-CMD ["node", "oh-wow.js"]
+USER node
+CMD ["node", "dist/index.js"]

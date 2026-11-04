@@ -1,3 +1,1 @@
-import './cryptocompare';
-
-export { getPrices } from './cryptocompare';
+export { fetchPrices } from './cryptocompare';

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - typescript-refactor
   workflow_dispatch:
 
 jobs:
@@ -24,4 +25,5 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/owen-wilson-bot:latest
+          # main -> :latest (prod), any other branch -> :dev (test stack)
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/owen-wilson-bot:${{ github.ref_name == 'main' && 'latest' || 'dev' }}

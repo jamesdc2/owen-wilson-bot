@@ -2,9 +2,9 @@
   "name": "owenwilsonbot",
   "version": "1.0.0",
   "description": "a really cool bot",
-  "main": "dist/oh-wow.js",
+  "main": "dist/index.js",
   "engines": {
-    "node": "23.11.0"
+    "node": ">=22"
   },
   "scripts": {
     "build": "tsc",
@@ -23,13 +23,13 @@
   },
   "homepage": "https://github.com/jamesdc2/owenwilsonbot#readme",
   "dependencies": {
+    "discord.js": "^14.25.1",
     "dotenv": "^8.6.0",
     "request": "^2.88.2"
   },
   "devDependencies": {
     "@types/node": "^25.3.5",
     "copyfiles": "^2.4.1",
-    "discord.js": "^14.25.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }

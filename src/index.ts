@@ -1,12 +1,17 @@
-import * as dotenv from 'dotenv';
+import 'dotenv/config';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import CustomClient from './client';
 import Bot from './bot/Bot';
 import { MessageHandler, ReactionHandler } from './events';
 import config  from './config';
+import { KeywordEntry } from './types';
 
-import keywords from '../config/keywords.json';
-
-dotenv.config();
+// Loaded at runtime (not bundled) so the file can be edited or volume-mounted without a rebuild.
+function loadKeywords(): KeywordEntry[] {
+    const path = resolve(process.env.KEYWORDS_PATH ?? 'config/keywords.json');
+    return JSON.parse(readFileSync(path, 'utf8'));
+}
 
 export async function start(): Promise<void> {
     const token = process.env.DISCORD_TOKEN;
@@ -28,7 +33,7 @@ export async function start(): Promise<void> {
     const bot = new Bot(
         client,
         token,
-        new MessageHandler(keywords, prefix),
+        new MessageHandler(loadKeywords(), prefix),
         new ReactionHandler()        
     );
 
