@@ -6,6 +6,7 @@ import {
     Message,
     MessageReaction,
     PartialMessageReaction,
+    PartialUser,
     User
 } from 'discord.js';
 
@@ -28,10 +29,8 @@ export default class Bot {
         this.client.on(Events.ClientReady, () => this.onReady());
         this.client.on(Events.MessageCreate, (msg: Message) => this.onMessage(msg));
         this.client.on(Events.InteractionCreate, (i: Interaction) => this.onInteraction(i));
-        this.client.on(Events.MessageReactionAdd,
-            (msgReaction: MessageReaction | PartialMessageReaction, user: User) =>
-                this.onReaction(msgReaction, user)
-            );
+        this.client.on(Events.MessageReactionAdd, (reaction, user) => this.onReaction(reaction, user, true));
+        this.client.on(Events.MessageReactionRemove, (reaction, user) => this.onReaction(reaction, user, false));
 
         this.messageHandler.registerCommands(commands);
         this.interactionHandler.registerCommands(commands);
@@ -62,10 +61,17 @@ export default class Bot {
     }
 
     private async onReaction(
-        msgReaction: MessageReaction | PartialMessageReaction,
-        reactor: User
+        reaction: MessageReaction | PartialMessageReaction,
+        user: User | PartialUser,
+        added: boolean
     ): Promise<void> {
-        return;
+        if (!this.client.isReady()) return;
+        try {
+            await this.reactionHandler.process(reaction, user, added);
+        } catch (error) {
+            // Usually Missing Permissions: the bot needs Manage Roles and must rank above the role.
+            console.error(`${new Date().toISOString()} [reaction] failed:`, error);
+        }
     }
 
     private async onReady(): Promise<void> {

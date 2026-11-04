@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { Partials } from 'discord.js';
 import CustomClient from './client';
 import Bot from './bot/Bot';
 import { InteractionHandler, MessageHandler, ReactionHandler } from './events';
@@ -25,7 +26,9 @@ export async function start(): Promise<void> {
             "Guilds",
             "GuildMessages",
             "GuildMessageReactions",
-            "MessageContent"]
+            "MessageContent"],
+        // Deliver reactions on messages sent before the last restart (e.g. an earlier /rollcall).
+        partials: [Partials.Message, Partials.Channel, Partials.Reaction]
     });
 
     const prefix = config.prefix ?? '!';
