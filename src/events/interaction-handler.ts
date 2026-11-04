@@ -53,8 +53,11 @@ export class InteractionHandler implements EventHandler {
         } catch (err) {
             console.error(`${new Date().toISOString()} [slash] /${interaction.commandName} failed:`, err);
             const reply: InteractionReplyOptions = { content: 'Something messed up.', flags: MessageFlags.Ephemeral };
-            // Discord rejects a second reply, so follow up if the command already responded.
-            if (interaction.replied || interaction.deferred) {
+            // Discord rejects a second reply: replace a pending "thinking..." placeholder,
+            // or follow up if the command already responded.
+            if (interaction.deferred && !interaction.replied) {
+                await interaction.editReply({ content: '🤢 Something messed up.' }).catch(() => {});
+            } else if (interaction.replied) {
                 await interaction.followUp(reply).catch(() => {});
             } else {
                 await interaction.reply(reply).catch(() => {});

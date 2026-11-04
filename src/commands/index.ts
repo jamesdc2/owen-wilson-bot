@@ -1,4 +1,5 @@
 import coin from './coin';
+import credits from './credits';
 import crypto from './crypto';
 import feelers from './feelers';
 import quickie from './quickie';
@@ -10,6 +11,7 @@ export { Command, SlashCommandData, toSlashCommandJSON } from './command';
 /** Every command the bot knows. Prefix and slash handlers are picked up from each entry. */
 export const commands: Command[] = [
     coin,
+    credits,
     crypto,
     feelers,
     quickie,
