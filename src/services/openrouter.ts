@@ -109,6 +109,16 @@ export async function chooseTool(model: string, messages: ChatMessage[], tools: 
 }
 
 /**
+ * OpenRouter rejects a modality combination the model can't produce with 404
+ * "No endpoints found that support the requested output modalities"; some providers use 400.
+ */
+function isUnsupportedModalities(err: unknown): boolean {
+    if (!(err instanceof OpenRouterError)) return false;
+    if (err.status !== 400 && err.status !== 404) return false;
+    return /modalit/i.test(JSON.stringify(err.detail));
+}
+
+/**
  * Generates an image with IMAGE_MODEL. Image-only models (e.g. Flux) want modalities ["image"],
  * mixed models (e.g. Gemini) want ["image", "text"]; try the mixed form first and fall back.
  */
@@ -126,7 +136,7 @@ export async function generateImage(prompt: string): Promise<Buffer> {
     try {
         body = await send(['image', 'text']);
     } catch (err) {
-        if (!(err instanceof OpenRouterError) || err.status !== 400) throw err;
+        if (!isUnsupportedModalities(err)) throw err;
         body = await send(['image']);
     }
 
