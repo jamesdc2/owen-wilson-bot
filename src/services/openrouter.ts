@@ -108,49 +108,48 @@ export async function chooseTool(model: string, messages: ChatMessage[], tools: 
     return { name: call.name, args };
 }
 
-/**
- * OpenRouter rejects a modality combination the model can't produce with 404
- * "No endpoints found that support the requested output modalities"; some providers use 400.
- */
-function isUnsupportedModalities(err: unknown): boolean {
-    if (!(err instanceof OpenRouterError)) return false;
-    if (err.status !== 400 && err.status !== 404) return false;
-    return /modalit/i.test(JSON.stringify(err.detail));
+/** Aspect ratios offered to the router; the images API accepts more, but a short list routes more reliably. */
+export const IMAGE_ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4', '21:9'] as const;
+export type ImageAspectRatio = typeof IMAGE_ASPECT_RATIOS[number];
+
+export interface GeneratedImage {
+    data: Buffer;
+    /** File extension matching the returned media type, e.g. "png". */
+    extension: string;
+    /** USD charged, if OpenRouter reported it. */
+    cost?: number;
 }
 
 /**
- * Generates an image with IMAGE_MODEL. Image-only models (e.g. Flux) want modalities ["image"],
- * mixed models (e.g. Gemini) want ["image", "text"]; try the mixed form first and fall back.
+ * Generates an image with IMAGE_MODEL via OpenRouter's images API.
+ * 1K PNGs stay well under Discord's upload limit; larger resolutions may not.
  */
-export async function generateImage(prompt: string): Promise<Buffer> {
-    const send = (modalities: string[]) => request('/chat/completions', {
+export async function generateImage(prompt: string, aspectRatio?: ImageAspectRatio): Promise<GeneratedImage> {
+    const body = await request('/images', {
         body: {
             model: config.openRouter.imageModel,
-            messages: [{ role: 'user', content: prompt }],
-            modalities,
+            prompt,
+            n: 1,
+            resolution: '1K',
+            output_format: 'png',
+            ...(aspectRatio ? { aspect_ratio: aspectRatio } : {}),
         },
         timeoutMs: IMAGE_TIMEOUT_MS,
     });
 
-    let body: any;
-    try {
-        body = await send(['image', 'text']);
-    } catch (err) {
-        if (!isUnsupportedModalities(err)) throw err;
-        body = await send(['image']);
-    }
-
-    const url: unknown = body?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (typeof url !== 'string') {
-        // Log the shape (minus any huge base64) so an API format change is easy to diagnose.
+    const image = body?.data?.[0];
+    if (typeof image?.b64_json !== 'string') {
+        // Trimmed so a format change is easy to diagnose without dumping huge base64 into logs.
         throw new Error(`OpenRouter returned no image: ${JSON.stringify(body).slice(0, 1000)}`);
     }
 
-    if (url.startsWith('data:')) {
-        return Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
-    }
+    const mediaType = typeof image.media_type === 'string' ? image.media_type : 'image/png';
+    const extension = mediaType === 'image/jpeg' ? 'jpg' : mediaType.split('/')[1] ?? 'png';
+    const cost = Number(body?.usage?.cost);
 
-    const download = await fetch(url, { signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS) });
-    if (!download.ok) throw new Error(`Image download failed: ${download.status}`);
-    return Buffer.from(await download.arrayBuffer());
+    return {
+        data: Buffer.from(image.b64_json, 'base64'),
+        extension,
+        cost: Number.isFinite(cost) ? cost : undefined,
+    };
 }
