@@ -1,4 +1,4 @@
-import { Client, Collection, Interaction, MessageFlags } from 'discord.js';
+import { Client, Collection, Interaction, InteractionReplyOptions, MessageFlags } from 'discord.js';
 import { EventHandler } from './event-handler';
 import { Command, toSlashCommandJSON } from '../commands';
 
@@ -52,7 +52,7 @@ export class InteractionHandler implements EventHandler {
             await command.interaction!(interaction);
         } catch (err) {
             console.error(`${new Date().toISOString()} [slash] /${interaction.commandName} failed:`, err);
-            const reply = { content: 'Something messed up.', flags: MessageFlags.Ephemeral };
+            const reply: InteractionReplyOptions = { content: 'Something messed up.', flags: MessageFlags.Ephemeral };
             // Discord rejects a second reply, so follow up if the command already responded.
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(reply).catch(() => {});
