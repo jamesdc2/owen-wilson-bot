@@ -24,8 +24,7 @@
   "homepage": "https://github.com/jamesdc2/owenwilsonbot#readme",
   "dependencies": {
     "dotenv": "^8.6.0",
-    "request": "^2.88.2",
-    "ytdl-core": "^4.11.5"
+    "request": "^2.88.2"
   },
   "devDependencies": {
     "@types/node": "^25.3.5",

@@ -50,23 +50,6 @@ client.on('message', message => {
 
     if (message.author.bot) return;
 
-    // Re-format the message if being sent by a cone of shame wearer
-    if (message.member.roles.cache.find(r => r.name === "cone of shame"))
-    {
-        
-        var input = message.content;
-        var mockingMessage = "";
-        for (i=0; i < input.length; i++)
-        {
-            mockingMessage += i % 2 == 0 ? input.charAt(i).toLowerCase() : input.charAt(i).toUpperCase();
-        }
-
-        const attachment = new Discord.MessageAttachment('https://media.giphy.com/media/QUXYcgCwvCm4cKcrI3/giphy.gif');
-        message.channel.send(attachment);
-        message.channel.send(`${mockingMessage}`)
-            .catch(error => console.error(error));
-    }
-
     // process keywords from the file
     keywords.forEach((item) => {
         if (message.content.toLowerCase().indexOf(item.keyword) >= 0) {
@@ -144,41 +127,6 @@ client.on('messageReactionRemove', async (reaction, user) => {
         console.log(`Removed BAD BOI role from ${member.DisplayName}`)
     } 
 
-});
-
-client.on('guildMemberUpdate', (oldMember, newMember) => {
-    const channel = oldMember.guild.channels.cache.find(r => r.name === "general");
-
-    // Cone of Shame is added
-    if (oldMember.roles.cache.size < newMember.roles.cache.size) {
-        for (const role of newMember.roles.cache.map(r => r.id))
-        {
-            if (!oldMember.roles.cache.has(role) && newMember.roles.cache.get(role).name === "cone of shame") {
-                channel.send(`The cone of shame has been placed on ${newMember.user.toString()}`)
-                    .then(message => console.log(`Cone of shame was placed on ${message.mentions.users.first().username} at ${moment().format()}!`))
-                    .catch(error => console.error(error));
-                
-                const attachment = new Discord.MessageAttachment('https://media.giphy.com/media/ysh3Vdn9DcuGI/giphy.gif');
-                channel.send(attachment);
-                
-                break;
-            }
-        }
-    }
-
-    // cone of shame removed
-    if (oldMember.roles.cache.size > newMember.roles.cache.size) {
-        for (const role of oldMember.roles.cache.map(r => r.id))
-        {
-            if (!newMember.roles.cache.has(role) && oldMember.roles.cache.get(role).name === "cone of shame") {
-                channel.send(`The cone of shame has been removed from ${newMember.user.toString()}`)
-                    .then(message => console.log(`Cone of shame was removed from ${message.mentions.users.first().username} at ${moment().format()}!`))
-                    .catch(error => console.error(error));      
-                
-                break;
-            }
-        }
-    }
 });
 
 client.login(process.env.DISCORD_TOKEN);
