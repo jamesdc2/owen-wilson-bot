@@ -1,7 +1,7 @@
 {
   "name": "owenwilsonbot",
   "version": "1.0.0",
-  "description": "a really cool bot",
+  "description": "Owen Wilson Discord bot: keyword GIFs, slash commands, and @mention AI chat with skills",
   "main": "dist/index.js",
   "engines": {
     "node": ">=22"
@@ -13,23 +13,21 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jamesdc2/owenwilsonbot.git"
+    "url": "git+https://github.com/jamesDC2/owen-wilson-bot.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/jamesdc2/owenwilsonbot/issues"
+    "url": "https://github.com/jamesDC2/owen-wilson-bot/issues"
   },
-  "homepage": "https://github.com/jamesdc2/owenwilsonbot#readme",
+  "homepage": "https://github.com/jamesDC2/owen-wilson-bot#readme",
   "dependencies": {
     "discord.js": "^14.25.1",
-    "dotenv": "^8.6.0",
-    "request": "^2.88.2"
+    "dotenv": "^8.6.0"
   },
   "devDependencies": {
     "@types/node": "^25.3.5",
-    "copyfiles": "^2.4.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }
