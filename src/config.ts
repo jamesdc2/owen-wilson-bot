@@ -5,6 +5,10 @@ const config = {
       // Set on the dev stack so slash commands register to the test server instantly.
       guildId: process.env.GUILD_ID || undefined,
     },
+    storage: {
+      /** SQLite file. In Docker this sits on the bot-data volume (/usr/src/bot/data). */
+      dbPath: process.env.DB_PATH || 'data/bot.db',
+    },
     cryptoCompare: {
       baseUrl: 'https://min-api.cryptocompare.com/data',
       apiKey: process.env.CRYPTOCOMPARE_API_KEY

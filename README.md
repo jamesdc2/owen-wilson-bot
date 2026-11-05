@@ -28,6 +28,7 @@ All settings are environment variables (a local `.env`, or the Portainer stack).
 | `ROUTER_MODEL` | for skills | Small tool-calling model that picks a skill, e.g. `google/gemini-2.5-flash-lite`. Unset sends every mention to chat. |
 | `IMAGE_MODEL` | for images | e.g. `black-forest-labs/flux-3-image-klein`. Unset disables the image skill. |
 | `KEYWORDS_PATH` | no | Path to the keywords file. Defaults to `config/keywords.json`. |
+| `DB_PATH` | no | SQLite database file. Defaults to `data/bot.db`; in Docker, mount a named volume at `/usr/src/bot/data` so it survives redeploys. Created and migrated automatically on startup. |
 | `CRYPTOCOMPARE_API_KEY` | no | Reserved for a future crypto skill |
 
 The bot needs the **Message Content** intent enabled, and must be invited with the `bot` and `applications.commands` scopes. It needs these permissions:

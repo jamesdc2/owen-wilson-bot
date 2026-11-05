@@ -41,15 +41,18 @@ Goal: answer things the model can't know (scores, news, opening hours, prices).
   - [ ] Add the same volume to the **prod** stack.
 - [x] **Dockerfile** creates `/usr/src/bot/data` owned by `node`, so the non-root bot can write to it.
   - [ ] Recreate the dev volume once: it was created before this change, so it's root-owned. Check with `touch /usr/src/bot/data/test`.
-- [ ] **SQLite**, a single file on the volume, instead of JSON:
+- [x] **SQLite**, a single file on the volume, instead of JSON (`src/services/storage.ts`):
   - many small writes at any time, safely, even two at once;
   - no extra server to run;
   - no migration from JSON later.
-  - Prefer Node 24's built-in `node:sqlite` (no native build in Alpine). Confirm it's stable enough first; fall back to `better-sqlite3`.
+  - Uses Node 24's built-in `node:sqlite`: no new dependency, no native build in Alpine, no experimental warning on 24.22.
   - `DB_PATH` env var, default `data/bot.db`. Locally that's `./data/` (git-ignored).
-  - Create tables automatically on startup; nothing to run by hand.
-- [ ] Wrap it in a small storage module (`get personality`, `save reminder`, …) so commands and skills never touch the database directly.
-- [ ] **Backups:** use SQLite's safe backup API, not a raw file copy while the bot is writing. Later: a nightly backup to the volume, or off the host.
+  - Tables are created automatically on startup by versioned migrations (`PRAGMA user_version`); nothing to run by hand.
+  - WAL mode, so an admin UI can read while the bot writes.
+  - Graceful shutdown on `docker stop` (SIGTERM) closes the database cleanly.
+- [x] Wrap it in a small storage module (`setRoleExpiry`, `dueRoleExpiries`, …) so commands and skills never touch the database directly.
+- [x] **Backups:** `backupStorage(dest)` uses SQLite's safe backup API, which is safe while the bot is writing.
+  - [ ] Later: a nightly backup to the volume, or off the host.
 
 **Why not the alternatives:**
 - **A Postgres container in the stack:** extra service and backups to run yourself, for tiny data.
@@ -72,7 +75,7 @@ Goal: answer things the model can't know (scores, news, opening hours, prices).
   - The router turns natural-language times into exact timestamps (it already knows the current date).
   - Stored in SQLite, so reminders survive restarts.
 - [ ] A scheduler checks every minute for due reminders and posts them.
-- [ ] **Also:** move the reaction-role expiry (8h Gamer/Bad Boi) into storage. Today's in-memory timers are lost on restart.
+- [x] ~~Move the reaction-role expiry (8h Gamer/Bad Boi) into storage.~~ Done on `storage`: a once-a-minute sweep removes expired roles, including any that came due while the bot was down.
 
 ## 6. Memories
 
@@ -97,5 +100,5 @@ Goal: answer things the model can't know (scores, news, opening hours, prices).
 2. Web search skill
 3. Storage layer and data volume
 4. `/personality`
-5. Reminders, plus persistent reaction-role expiry
+5. Reminders
 6. Memories

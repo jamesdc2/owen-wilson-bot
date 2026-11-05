@@ -41,6 +41,12 @@ export default class Bot {
         await this.client.login(token);
     }
 
+    /** Disconnects from Discord and stops background work. */
+    public async stop(): Promise<void> {
+        this.reactionHandler.stopExpirySweeper();
+        await this.client.destroy();
+    }
+
     private async onMessage(msg: Message): Promise<void> {
         if (!this.client.isReady()) return;
         try {
@@ -82,6 +88,8 @@ export default class Bot {
         console.log(`Client logged in as '${this.client.user!.tag}'.`)
 
         if (!this.client.isReady()) return;
+        // Removes temporary roles that expired, including any that came due while the bot was down.
+        this.reactionHandler.startExpirySweeper(this.client);
         try {
             await this.interactionHandler.deploy(this.client, this.guildId);
         } catch (error) {
