@@ -3,11 +3,18 @@ import { EventHandler } from './event-handler';
 import { ChatMessage, chatCompletion, isOpenRouterConfigured } from '../services/openrouter';
 import { RouteDecision, routeMessage, skills } from '../skills';
 
-const SYSTEM_PROMPT = `You are a Discord bot.
+const TIME_ZONE = 'America/New_York';
+
+/** Built per request so the model always knows the current date and time. */
+function systemPrompt(): string {
+    const now = new Date().toLocaleString('en-US', { timeZone: TIME_ZONE, dateStyle: 'full', timeStyle: 'short' });
+    return `You are a Discord bot.
 Respond in plain text or very simple Markdown only.
 Do NOT use tables.
 Do NOT use Markdown tables, lists with pipes, or code blocks.
-Short paragraphs are preferred.`;
+Short paragraphs are preferred.
+The current date and time is: ${now}.`;
+}
 
 /** Reply-chain context limits: whichever is hit first. Newest messages are kept. */
 const MAX_CONTEXT_MESSAGES = 10;
@@ -165,7 +172,7 @@ export class MentionHandler implements EventHandler {
     /** Asks the chat model (MODEL) for a reply, optionally with extra context from a skill. */
     private async chat(prompt: string, history: ChatMessage[], skillContext?: string): Promise<string> {
         const answer = await chatCompletion([
-            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'system', content: systemPrompt() },
             ...history,
             { role: 'user', content: prompt },
             ...(skillContext ? [{ role: 'system' as const, content: skillContext }] : []),
