@@ -21,5 +21,10 @@ COPY --from=builder /usr/src/bot/dist ./dist
 # Keyword list is read at runtime; mount over /usr/src/bot/config to change it without rebuilding.
 COPY config ./config
 
+# Persistent data (SQLite) lives here; mount a named volume at /usr/src/bot/data.
+# Created as `node` so the non-root bot can write to it; Docker copies this ownership
+# into a new, empty named volume on first mount.
+RUN mkdir -p data && chown node:node data
+
 USER node
 CMD ["node", "dist/index.js"]
