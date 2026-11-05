@@ -1,10 +1,11 @@
 name: Build and Push Docker Image
 
 on:
+  # main → :latest (prod); any other branch → :dev (test stack).
+  # Dependabot branches are skipped so they don't overwrite the :dev image.
   push:
-    branches:
-      - main
-      - typescript-refactor
+    branches-ignore:
+      - 'dependabot/**'
   workflow_dispatch:
 
 jobs:
