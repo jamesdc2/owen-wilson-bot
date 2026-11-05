@@ -19,9 +19,39 @@ In debates and philosophical arguments, take a position and defend it. Concede o
 The current date and time is: ${now}.`;
 }
 
-/** Reply-chain context limits: whichever is hit first. Newest messages are kept. */
+/** Reply-chain context limits: whichever is hit first. The first message and the newest are kept. */
 const MAX_CONTEXT_MESSAGES = 10;
 const MAX_CONTEXT_CHARS = 6000;
+/** The first message is always kept, but a huge one is shortened so it can't eat the budget. */
+const MAX_FIRST_MESSAGE_CHARS = 1500;
+/** Stop walking very long chains (each step may be a Discord API call). */
+const MAX_CHAIN_WALK = 50;
+const OMITTED = '[...earlier messages omitted...]';
+
+/**
+ * Picks context from reply-chain turns (newest first): the oldest turn, then the newest that fit
+ * the budget. Returns them oldest first, marking a gap where middle messages were dropped.
+ */
+export function selectContext(newestFirst: ChatMessage[]): ChatMessage[] {
+    if (newestFirst.length === 0) return [];
+
+    const oldest = newestFirst[newestFirst.length - 1];
+    const first: ChatMessage = oldest.content.length > MAX_FIRST_MESSAGE_CHARS
+        ? { ...oldest, content: oldest.content.slice(0, MAX_FIRST_MESSAGE_CHARS) + '…' }
+        : oldest;
+
+    const recent: ChatMessage[] = [];
+    let chars = first.content.length;
+    for (const turn of newestFirst.slice(0, -1)) {
+        if (recent.length + 1 >= MAX_CONTEXT_MESSAGES) break;
+        if (chars + turn.content.length > MAX_CONTEXT_CHARS) break;
+        chars += turn.content.length;
+        recent.unshift(turn);
+    }
+
+    const gap = recent.length < newestFirst.length - 1;
+    return [gap ? { ...first, content: `${first.content}\n${OMITTED}` } : first, ...recent];
+}
 const DISCORD_MAX_LENGTH = 2000;
 
 const THINKING = '🤔 Thinking...';
@@ -101,29 +131,28 @@ export class MentionHandler implements EventHandler {
     }
 
     /**
-     * Walks the reply chain above `message` (newest first) into chat history, oldest first,
-     * stopping at MAX_CONTEXT_MESSAGES / MAX_CONTEXT_CHARS. A message that isn't a reply has no history.
+     * Walks the reply chain above `message` into chat history, oldest first. Keeps the first
+     * message (what the conversation is about) plus as many of the newest as fit in
+     * MAX_CONTEXT_MESSAGES / MAX_CONTEXT_CHARS; the middle of a long chain is dropped.
+     * A message that isn't a reply has no history.
      */
     private async buildHistory(message: Message): Promise<ChatMessage[]> {
         const botId = message.client.user.id;
-        const history: ChatMessage[] = [];
-        let chars = 0;
+        const turns: ChatMessage[] = []; // newest first
         let current: Message | null = message;
+        let walked = 0;
 
-        while (current?.reference?.messageId && history.length < MAX_CONTEXT_MESSAGES) {
+        while (current?.reference?.messageId && walked < MAX_CHAIN_WALK) {
             // Uses discord.js's message cache first, so recent chains rarely hit the API.
             current = await current.fetchReference().catch(() => null);
             if (!current) break;
+            walked++;
 
             const turn = this.toChatMessage(current, botId, message.author.id);
-            if (!turn) continue;
-
-            if (chars + turn.content.length > MAX_CONTEXT_CHARS) break;
-            chars += turn.content.length;
-            history.unshift(turn);
+            if (turn) turns.push(turn);
         }
 
-        return history;
+        return selectContext(turns);
     }
 
     /** Converts a message from the reply chain into a chat turn, or null to skip it. */
