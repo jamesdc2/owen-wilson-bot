@@ -1,6 +1,5 @@
-import { 
+import {
     Client,
-    Collection,
     Events,
     Interaction,
     Message,
@@ -10,7 +9,7 @@ import {
     User
 } from 'discord.js';
 
-import { InteractionHandler, MentionHandler, MessageHandler, ReactionHandler } from '../events';
+import { InteractionHandler, KeywordHandler, MentionHandler, ReactionHandler } from '../events';
 import { commands } from '../commands';
 
 
@@ -18,7 +17,7 @@ export default class Bot {
     constructor(
         private client: Client,
         private token: string,
-        private messageHandler: MessageHandler,
+        private keywordHandler: KeywordHandler,
         private mentionHandler: MentionHandler,
         private interactionHandler: InteractionHandler,
         private reactionHandler: ReactionHandler,
@@ -33,7 +32,6 @@ export default class Bot {
         this.client.on(Events.MessageReactionAdd, (reaction, user) => this.onReaction(reaction, user, true));
         this.client.on(Events.MessageReactionRemove, (reaction, user) => this.onReaction(reaction, user, false));
 
-        this.messageHandler.registerCommands(commands);
         this.interactionHandler.registerCommands(commands);
 
         await this.login(this.token);
@@ -46,12 +44,12 @@ export default class Bot {
     private async onMessage(msg: Message): Promise<void> {
         if (!this.client.isReady()) return;
         try {
-            // @mentions go to the AI chat instead of commands/keywords. Other bots are ignored to avoid loops.
+            // @mentions go to the AI chat instead of keywords. Other bots are ignored to avoid loops.
             if (!msg.system && !msg.author.bot && await this.mentionHandler.isMention(msg)) {
                 await this.mentionHandler.process(msg);
                 return;
             }
-            await this.messageHandler.process(msg);
+            await this.keywordHandler.process(msg);
         } catch ( error )
         {
             console.error(error);
@@ -87,7 +85,7 @@ export default class Bot {
         try {
             await this.interactionHandler.deploy(this.client, this.guildId);
         } catch (error) {
-            // Keep running: prefix commands and keywords still work without slash commands.
+            // Keep running: keywords, @mention chat and reaction roles still work without slash commands.
             console.error('Failed to register slash commands:', error);
         }
     }

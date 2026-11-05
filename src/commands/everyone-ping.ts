@@ -1,4 +1,4 @@
-import { Message, TextChannel } from 'discord.js';
+import { Message } from 'discord.js';
 import { Command } from './command';
 
 async function addReactions(message: Message, reactions: string[]): Promise<void> {
@@ -9,7 +9,7 @@ async function addReactions(message: Message, reactions: string[]): Promise<void
 }
 
 /**
- * A command that posts an @everyone message with a GIF, via prefix or slash,
+ * A slash command that posts an @everyone message with a GIF,
  * optionally seeding the post with reactions for people to click.
  */
 export function everyonePing(
@@ -22,11 +22,6 @@ export function everyonePing(
     return {
         name,
         description,
-        execute: async (message) => {
-            if (!(message.channel instanceof TextChannel)) return;
-            const sent = await message.channel.send({ content, files: [gif] });
-            await addReactions(sent, reactions);
-        },
         interaction: async (interaction) => {
             const response = await interaction.reply({
                 content,

@@ -9,11 +9,8 @@ function log(text: string): void {
 export class InteractionHandler implements EventHandler {
     private commands: Collection<string, Command> = new Collection();
 
-    /** Only commands with an `interaction` handler become slash commands. */
     registerCommands(commands: Command[]): void {
-        commands
-            .filter(cmd => cmd.interaction)
-            .forEach(cmd => this.commands.set(cmd.name, cmd));
+        commands.forEach(cmd => this.commands.set(cmd.name, cmd));
     }
 
     /**
@@ -49,7 +46,7 @@ export class InteractionHandler implements EventHandler {
 
         log(`/${interaction.commandName} → ${where} (by ${interaction.user.username})`);
         try {
-            await command.interaction!(interaction);
+            await command.interaction(interaction);
         } catch (err) {
             console.error(`${new Date().toISOString()} [slash] /${interaction.commandName} failed:`, err);
             const reply: InteractionReplyOptions = { content: 'Something messed up.', flags: MessageFlags.Ephemeral };

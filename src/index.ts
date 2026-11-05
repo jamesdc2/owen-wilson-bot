@@ -4,7 +4,7 @@ import { resolve } from 'path';
 import { Partials } from 'discord.js';
 import CustomClient from './client';
 import Bot from './bot/Bot';
-import { InteractionHandler, MentionHandler, MessageHandler, ReactionHandler } from './events';
+import { InteractionHandler, KeywordHandler, MentionHandler, ReactionHandler } from './events';
 import config  from './config';
 import { KeywordEntry } from './types';
 
@@ -31,15 +31,13 @@ export async function start(): Promise<void> {
         partials: [Partials.Message, Partials.Channel, Partials.Reaction]
     });
 
-    const prefix = config.prefix ?? '!';
-
     const keywords = loadKeywords();
-    console.log(`Prefix "${prefix}", ${keywords.length} keywords loaded`);
+    console.log(`${keywords.length} keywords loaded`);
 
     const bot = new Bot(
         client,
         token,
-        new MessageHandler(keywords, prefix),
+        new KeywordHandler(keywords),
         new MentionHandler(),
         new InteractionHandler(),
         new ReactionHandler(),

@@ -1,6 +1,5 @@
 import {
     ChatInputCommandInteraction,
-    Message,
     RESTPostAPIChatInputApplicationCommandsJSONBody,
     SlashCommandBuilder,
 } from 'discord.js';
@@ -10,17 +9,16 @@ export interface SlashCommandData {
     toJSON(): RESTPostAPIChatInputApplicationCommandsJSONBody;
 }
 
+/** A slash command. Every entry in `commands` is registered with Discord at startup. */
 export interface Command {
     /** Lowercase, 1-32 chars, no spaces: Discord's slash-command name rules. */
     name: string;
-    /** Shown in Discord's command picker. Required for slash commands, 1-100 chars. */
+    /** Shown in Discord's command picker, 1-100 chars. */
     description: string;
-    /** Optional custom builder, for commands with options. Defaults to name + description. */
+    /** Optional custom builder, for commands with options or permissions. Defaults to name + description. */
     builder?: SlashCommandData;
-    /** Prefix handler (e.g. `|coin`). Being phased out in favor of slash commands. */
-    execute?: (message: Message, args?: string[]) => Promise<void>;
-    /** Slash handler (`/coin`). Commands with this are registered with Discord at startup. */
-    interaction?: (interaction: ChatInputCommandInteraction) => Promise<void>;
+    /** Runs when someone uses `/name`. */
+    interaction: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }
 
 /** Builds the JSON Discord expects when registering a slash command. */

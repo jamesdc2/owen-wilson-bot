@@ -1,5 +1,5 @@
-export { MessageHandler } from './message-handler';
 export { EventHandler } from './event-handler';
-export { ReactionHandler } from './reaction-handler'
 export { InteractionHandler } from './interaction-handler';
+export { KeywordHandler } from './keyword-handler';
 export { MentionHandler } from './mention-handler';
+export { ReactionHandler } from './reaction-handler';
