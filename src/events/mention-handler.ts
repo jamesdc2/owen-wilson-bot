@@ -9,24 +9,36 @@ Do NOT use tables.
 Do NOT use Markdown tables, lists with pipes, or code blocks.
 Short paragraphs are preferred.`;
 
-/** Per-user turns kept for context (user + assistant messages combined). */
-const MAX_MESSAGES = 10;
+/** Reply-chain context limits: whichever is hit first. Newest messages are kept. */
+const MAX_CONTEXT_MESSAGES = 10;
+const MAX_CONTEXT_CHARS = 6000;
 const DISCORD_MAX_LENGTH = 2000;
+
+const THINKING = '🤔 Thinking...';
+const FAILED = '🤢 Something messed up.';
 
 function log(text: string, message: Message): void {
     const channel = 'name' in message.channel ? `#${message.channel.name}` : 'DM';
     console.log(`${new Date().toISOString()} [mention] ${text} → ${channel} (by ${message.author.username})`);
 }
 
-/** AI chat when someone @mentions the bot (or replies to it). Ported from legacy !jarvis. */
+/**
+ * AI chat. A fresh @mention starts a new conversation; replying to one of the bot's
+ * answers continues it, using the Discord reply chain as the conversation history.
+ */
 export class MentionHandler implements EventHandler {
-    private conversations = new Map<string, ChatMessage[]>();
 
-    /** True for a direct @mention, a reply to the bot, or a mention of the bot's own role. Ignores @everyone. */
-    public isMention(message: Message): boolean {
-        const botId = message.client.user.id;
-        return message.mentions.users.has(botId)
-            || message.mentions.roles.some(role => role.tags?.botId === botId);
+    /**
+     * True for an explicit @mention of the bot (or its role), or a reply to one of the bot's
+     * AI answers (pinged or not). Replies to other bot posts, like keyword GIFs or /rollcall,
+     * don't count, so "I'm in!" under a rollcall doesn't get an AI response. Ignores @everyone.
+     */
+    public async isMention(message: Message): Promise<boolean> {
+        if (this.mentionsBotExplicitly(message)) return true;
+        if (message.mentions.repliedUser?.id !== message.client.user.id) return false;
+
+        const parent = await message.fetchReference().catch(() => null);
+        return parent !== null && this.isAiAnswer(parent);
     }
 
     public async process(message: Message): Promise<void> {
@@ -43,10 +55,11 @@ export class MentionHandler implements EventHandler {
             return;
         }
 
-        log(`prompt (${prompt.length} chars)`, message);
-        const thinking = await message.reply('🤔 Thinking...');
+        const history = await this.buildHistory(message);
+        const historyChars = history.reduce((sum, m) => sum + m.content.length, 0);
+        log(`prompt (${prompt.length} chars, ${history.length} context msgs / ${historyChars} chars)`, message);
 
-        const history = this.conversations.get(message.author.id) ?? [];
+        const thinking = await message.reply(THINKING);
 
         try {
             const decision = await this.route(prompt, history, message);
@@ -54,7 +67,6 @@ export class MentionHandler implements EventHandler {
             if (decision.kind === 'chat') {
                 const answer = await this.chat(prompt, history);
                 await thinking.edit(answer);
-                this.remember(message.author.id, history, prompt, answer);
                 log(`answered (${answer.length} chars)`, message);
                 return;
             }
@@ -66,18 +78,72 @@ export class MentionHandler implements EventHandler {
 
             if (result.type === 'reply') {
                 await thinking.edit({ content: result.content, files: result.files ?? [] });
-                this.remember(message.author.id, history, prompt, result.summary);
             } else {
                 // Let the chat model phrase the skill's data in the bot's own voice.
                 const answer = await this.chat(prompt, history, `Result from ${skill.name}:\n${result.data}`);
                 await thinking.edit(answer);
-                this.remember(message.author.id, history, prompt, answer);
             }
             log(`${skill.name} done`, message);
         } catch (err) {
             console.error(`${new Date().toISOString()} [mention] failed:`, err);
-            await thinking.edit('🤢 Something messed up.').catch(() => {});
+            await thinking.edit(FAILED).catch(() => {});
         }
+    }
+
+    /**
+     * Walks the reply chain above `message` (newest first) into chat history, oldest first,
+     * stopping at MAX_CONTEXT_MESSAGES / MAX_CONTEXT_CHARS. A message that isn't a reply has no history.
+     */
+    private async buildHistory(message: Message): Promise<ChatMessage[]> {
+        const botId = message.client.user.id;
+        const history: ChatMessage[] = [];
+        let chars = 0;
+        let current: Message | null = message;
+
+        while (current?.reference?.messageId && history.length < MAX_CONTEXT_MESSAGES) {
+            // Uses discord.js's message cache first, so recent chains rarely hit the API.
+            current = await current.fetchReference().catch(() => null);
+            if (!current) break;
+
+            const turn = this.toChatMessage(current, botId, message.author.id);
+            if (!turn) continue;
+
+            if (chars + turn.content.length > MAX_CONTEXT_CHARS) break;
+            chars += turn.content.length;
+            history.unshift(turn);
+        }
+
+        return history;
+    }
+
+    /** Converts a message from the reply chain into a chat turn, or null to skip it. */
+    private toChatMessage(msg: Message, botId: string, currentAuthorId: string): ChatMessage | null {
+        if (msg.author.id === botId) {
+            if (msg.content === THINKING || msg.content === FAILED) return null;
+            // Image replies are a caption plus attachment; note the image so follow-ups make sense.
+            const content = msg.attachments.size > 0 ? `${msg.content} [image attached]`.trim() : msg.content;
+            return content ? { role: 'assistant', content } : null;
+        }
+
+        const text = this.stripMentions(msg);
+        if (!text) return null;
+        // In group threads, name other speakers so the model can tell people apart.
+        const content = msg.author.id === currentAuthorId ? text : `${msg.member?.displayName ?? msg.author.username}: ${text}`;
+        return { role: 'user', content };
+    }
+
+    /** AI answers are the bot's replies to a person; GIFs, /rollcall and other posts aren't replies. */
+    private isAiAnswer(msg: Message): boolean {
+        return msg.author.id === msg.client.user.id
+            && Boolean(msg.reference?.messageId)
+            && !msg.interactionMetadata;
+    }
+
+    private mentionsBotExplicitly(message: Message): boolean {
+        const botId = message.client.user.id;
+        // Check the text, not mentions.users: Discord adds the replied-to user there on pinged replies.
+        return new RegExp(`<@!?${botId}>`).test(message.content)
+            || message.mentions.roles.some(role => role.tags?.botId === botId);
     }
 
     /** Picks chat vs. a skill. Router failures fall back to chat rather than failing the reply. */
@@ -108,13 +174,7 @@ export class MentionHandler implements EventHandler {
         return answer.length > DISCORD_MAX_LENGTH ? answer.slice(0, 1950) + '...' : answer;
     }
 
-    /** Only successful turns are remembered, so a failed request doesn't skew context. */
-    private remember(userId: string, history: ChatMessage[], prompt: string, reply: string): void {
-        history.push({ role: 'user', content: prompt }, { role: 'assistant', content: reply });
-        this.conversations.set(userId, history.slice(-MAX_MESSAGES));
-    }
-
-    /** Removes the bot's user and role mentions so only the actual question is sent to the model. */
+    /** Removes the bot's user and role mentions so only the actual text is sent to the model. */
     private stripMentions(message: Message): string {
         const botId = message.client.user.id;
         const botRoleIds = message.mentions.roles

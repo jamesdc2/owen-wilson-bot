@@ -73,11 +73,30 @@ export async function getCredits(): Promise<Credits> {
     return { purchased, used, remaining: purchased - used };
 }
 
+/**
+ * Logs token counts and USD cost from a response's `usage` block, e.g.
+ * "[chat] google/gemini-2.5-flash 1240 in / 310 out, $0.0004".
+ */
+/** "$0.0004", "$0.000021": enough digits that tiny router costs don't round to zero. */
+export function formatCost(cost: number): string {
+    return cost >= 0.01 || cost === 0 ? `$${cost.toFixed(4)}` : `$${Number(cost.toPrecision(2))}`;
+}
+
+function logUsage(tag: string, model: string | undefined, body: any): void {
+    const usage = body?.usage;
+    if (!usage) return;
+    const cost = Number(usage.cost);
+    const costText = Number.isFinite(cost) ? `, ${formatCost(cost)}` : '';
+    console.log(`${new Date().toISOString()} [${tag}] ${model} ${usage.prompt_tokens ?? '?'} in / ${usage.completion_tokens ?? '?'} out${costText}`);
+}
+
 /** Sends a conversation to the chat model (MODEL) and returns the reply text. */
 export async function chatCompletion(messages: ChatMessage[]): Promise<string> {
     const body = await request('/chat/completions', {
-        body: { model: config.openRouter.model, messages },
+        // usage.include asks OpenRouter to report cost alongside token counts.
+        body: { model: config.openRouter.model, messages, usage: { include: true } },
     });
+    logUsage('chat', config.openRouter.model, body);
 
     const answer = body?.choices?.[0]?.message?.content;
     if (typeof answer !== 'string' || !answer.trim()) {
@@ -93,8 +112,9 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<string> {
  */
 export async function chooseTool(model: string, messages: ChatMessage[], tools: ToolDefinition[]): Promise<ToolCall | null> {
     const body = await request('/chat/completions', {
-        body: { model, messages, tools, tool_choice: 'required', temperature: 0 },
+        body: { model, messages, tools, tool_choice: 'required', temperature: 0, usage: { include: true } },
     });
+    logUsage('router', model, body);
 
     const call = body?.choices?.[0]?.message?.tool_calls?.[0]?.function;
     if (!call?.name) return null;

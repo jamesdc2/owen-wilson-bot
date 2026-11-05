@@ -3,8 +3,15 @@ import { ChatMessage, ToolDefinition, chooseTool } from '../services/openrouter'
 import config from '../config';
 
 const CHAT_TOOL = 'chat';
-/** How much recent conversation the router sees, so follow-ups ("now make it blue") route correctly. */
-const ROUTER_HISTORY = 6;
+/**
+ * The router only needs the gist of recent turns for follow-ups ("now make it blue"),
+ * so it gets fewer, shortened messages than the chat model.
+ */
+const ROUTER_HISTORY = 4;
+const ROUTER_TURN_CHARS = 200;
+
+const trimTurn = (m: ChatMessage): ChatMessage =>
+    m.content.length > ROUTER_TURN_CHARS ? { ...m, content: m.content.slice(0, ROUTER_TURN_CHARS) + '…' } : m;
 
 const ROUTER_PROMPT = `You route messages sent to a Discord bot. Call exactly one tool.
 Call "${CHAT_TOOL}" for conversation, questions, jokes, advice, or anything no other tool clearly covers.
@@ -44,7 +51,7 @@ export async function routeMessage(prompt: string, history: ChatMessage[], skill
 
     const call = await chooseTool(routerModel, [
         { role: 'system', content: ROUTER_PROMPT },
-        ...history.slice(-ROUTER_HISTORY),
+        ...history.slice(-ROUTER_HISTORY).map(trimTurn),
         { role: 'user', content: prompt },
     ], tools);
 

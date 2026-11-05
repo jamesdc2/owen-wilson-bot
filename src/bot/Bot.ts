@@ -47,7 +47,7 @@ export default class Bot {
         if (!this.client.isReady()) return;
         try {
             // @mentions go to the AI chat instead of commands/keywords. Other bots are ignored to avoid loops.
-            if (!msg.system && !msg.author.bot && this.mentionHandler.isMention(msg)) {
+            if (!msg.system && !msg.author.bot && await this.mentionHandler.isMention(msg)) {
                 await this.mentionHandler.process(msg);
                 return;
             }

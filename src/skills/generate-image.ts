@@ -1,5 +1,5 @@
 import { Skill } from './skill';
-import { IMAGE_ASPECT_RATIOS, ImageAspectRatio, generateImage } from '../services/openrouter';
+import { IMAGE_ASPECT_RATIOS, ImageAspectRatio, formatCost, generateImage } from '../services/openrouter';
 import config from '../config';
 
 const CAPTION_MAX = 300;
@@ -37,7 +37,7 @@ const generateImageSkill: Skill = {
 
         const image = await generateImage(prompt, aspectRatio);
 
-        const cost = image.cost !== undefined ? `, $${image.cost.toFixed(4)}` : '';
+        const cost = image.cost !== undefined ? `, ${formatCost(image.cost)}` : '';
         console.log(`${new Date().toISOString()} [image] ${config.openRouter.imageModel} ${aspectRatio ?? 'default'}${cost}`);
 
         const caption = prompt.length > CAPTION_MAX ? prompt.slice(0, CAPTION_MAX) + '…' : prompt;
