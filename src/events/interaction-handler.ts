@@ -16,7 +16,10 @@ export class InteractionHandler implements EventHandler {
     /**
      * Pushes the slash-command list to Discord. Replaces the whole set, so removed commands disappear.
      * With a guild ID, commands show up in that server instantly; without one they're global,
-     * which can take up to an hour to appear and applies to every server the bot is in.
+     * which can take a while to appear and applies to every server the bot is in.
+     *
+     * Commands registered the other way are cleared, otherwise switching GUILD_ID on or off
+     * leaves both sets registered and every command shows up twice.
      */
     async deploy(client: Client<true>, guildId?: string): Promise<void> {
         const body = this.commands.map(toSlashCommandJSON);
@@ -25,9 +28,23 @@ export class InteractionHandler implements EventHandler {
         if (guildId) {
             await client.application.commands.set(body, guildId);
             log(`Registered ${body.length} command(s) to guild ${guildId}: ${names}`);
+
+            const global = await client.application.commands.fetch();
+            if (global.size > 0) {
+                await client.application.commands.set([]);
+                log(`Cleared ${global.size} global command(s) to avoid duplicates`);
+            }
         } else {
             await client.application.commands.set(body);
             log(`Registered ${body.length} command(s) globally: ${names}`);
+
+            for (const guild of client.guilds.cache.values()) {
+                const local = await guild.commands.fetch();
+                if (local.size > 0) {
+                    await guild.commands.set([]);
+                    log(`Cleared ${local.size} command(s) registered to guild ${guild.name} to avoid duplicates`);
+                }
+            }
         }
     }
 
