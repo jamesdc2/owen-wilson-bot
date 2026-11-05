@@ -1,6 +1,5 @@
 import coin from './coin';
 import credits from './credits';
-import crypto from './crypto';
 import feelers from './feelers';
 import quickie from './quickie';
 import rollcall from './rollcall';
@@ -12,7 +11,6 @@ export { Command, SlashCommandData, toSlashCommandJSON } from './command';
 export const commands: Command[] = [
     coin,
     credits,
-    crypto,
     feelers,
     quickie,
     rollcall,
