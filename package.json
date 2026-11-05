@@ -4,7 +4,7 @@
   "description": "Owen Wilson Discord bot: keyword GIFs, slash commands, and @mention AI chat with skills",
   "main": "dist/index.js",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "scripts": {
     "build": "tsc",
