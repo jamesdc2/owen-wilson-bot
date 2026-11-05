@@ -15,7 +15,8 @@ const trimTurn = (m: ChatMessage): ChatMessage =>
 
 const ROUTER_PROMPT = `You route messages sent to a Discord bot. Call exactly one tool.
 Call "${CHAT_TOOL}" for conversation, questions, jokes, advice, or anything no other tool clearly covers.
-Only call another tool when the user is clearly asking for what it does.`;
+Only call another tool when the user is clearly asking for what it does.
+Opinions, debates, philosophy, hypotheticals and "what do you think" questions are "${CHAT_TOOL}", even when they name a famous person or idea.`;
 
 const chatTool: ToolDefinition = {
     type: 'function',

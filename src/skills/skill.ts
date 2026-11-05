@@ -1,10 +1,13 @@
 import { Message } from 'discord.js';
+import { ChatMessage } from '../services/openrouter';
 
 export interface SkillContext {
     /** The Discord message that triggered the skill. */
     message: Message;
     /** The user's text with bot mentions stripped. */
     prompt: string;
+    /** Earlier turns from the reply chain, oldest first (same as the chat model gets). */
+    history: ChatMessage[];
 }
 
 /**

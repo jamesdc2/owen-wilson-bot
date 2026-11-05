@@ -2,22 +2,7 @@ import { Message } from 'discord.js';
 import { EventHandler } from './event-handler';
 import { ChatMessage, chatCompletion, isOpenRouterConfigured } from '../services/openrouter';
 import { RouteDecision, routeMessage, skills } from '../skills';
-
-const TIME_ZONE = 'America/New_York';
-
-/** Built per request so the model always knows the current date and time. */
-function systemPrompt(): string {
-    const now = new Date().toLocaleString('en-US', { timeZone: TIME_ZONE, dateStyle: 'full', timeStyle: 'short' });
-    return `You are a Discord bot.
-Respond in plain text or very simple Markdown only.
-Do NOT use tables.
-Do NOT use Markdown tables, lists with pipes, or code blocks.
-Short paragraphs are preferred.
-If you don't know who or what someone is asking about, say so. Never invent names, people, facts or sources, and never guess which real person someone means.
-Only quote someone word for word when you are certain of the exact wording; otherwise paraphrase ("Kant argued that...").
-In debates and philosophical arguments, take a position and defend it. Concede only when actually persuaded, and say what changed your mind. Don't flatter the other person's points.
-The current date and time is: ${now}.`;
-}
+import { systemPrompt } from '../prompt';
 
 /** Reply-chain context limits: whichever is hit first. The first message and the newest are kept. */
 const MAX_CONTEXT_MESSAGES = 10;
@@ -114,7 +99,7 @@ export class MentionHandler implements EventHandler {
             const { skill, args } = decision;
             if (skill.progressMessage) await thinking.edit(skill.progressMessage);
 
-            const result = await skill.run(args, { message, prompt });
+            const result = await skill.run(args, { message, prompt, history });
 
             if (result.type === 'reply') {
                 await thinking.edit({ content: result.content, files: result.files ?? [] });

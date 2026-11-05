@@ -27,13 +27,17 @@ Goal: the bot can answer "what can you do?", "how do I get the Gamer role?" and 
 
 ## 2. Web search skill
 
-Goal: answer things the model can't know (scores, news, opening hours, prices).
+Goal: answer things the model can't know (scores, news, characters, who someone is) instead of making them up.
 
-- [ ] `web_search` skill using OpenRouter's built-in web search, with the existing `OPENROUTER_TOKEN` and no new API key.
-- [ ] The answer cites its sources.
-- [ ] The router decides by **question type** (current or changing facts → search), not by asking the model whether it's sure. Models are poor judges of what they don't know.
-- [ ] Check OpenRouter's per-search pricing first.
-- No storage needed, so it can be built independently.
+- [x] `web_search` skill using OpenRouter's `web` plugin, with the existing `OPENROUTER_TOKEN` and no new API key.
+  - Restricted to trusted sites (`SEARCH_DOMAINS`): Wikipedia, Fandom, Reuters, AP News and the Stanford Encyclopedia of Philosophy by default. `*` searches the whole web.
+  - Exa engine by default (about $0.007 per search; Google's own search can't filter sites).
+  - Up to 3 sources listed under the answer.
+- [x] The router decides by **question type**: factual lookups about specific named things → search; opinions, debates, philosophy and hypotheticals → chat.
+- [x] System prompt: don't guess or invent people, facts or quotes; hold a position in debates.
+- [x] Context always keeps the first message of a long reply chain.
+- [ ] Test on dev: character questions, follow-ups ("what else was he in?"), a debate that names Kant (should stay chat), and a question the sites can't answer.
+- [ ] Later, if Flash's arguments disappoint: route debates to a stronger `DEBATE_MODEL`.
 
 ## 3. Storage layer (foundation for 4–9)
 

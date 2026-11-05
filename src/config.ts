@@ -1,3 +1,12 @@
+/** Trusted sites for web search: facts, characters, news, philosophy. */
+const DEFAULT_SEARCH_DOMAINS = ['*.wikipedia.org', '*.fandom.com', 'reuters.com', 'apnews.com', 'plato.stanford.edu'];
+
+function parseDomains(value: string | undefined): string[] {
+    if (!value?.trim()) return DEFAULT_SEARCH_DOMAINS;
+    if (value.trim() === '*') return [];
+    return value.split(',').map(d => d.trim()).filter(Boolean);
+}
+
 const config = {
     discord: {
       token: process.env.DISCORD_TOKEN,
@@ -22,6 +31,13 @@ const config = {
       routerModel: process.env.ROUTER_MODEL || undefined,
       /** Image generation skill. */
       imageModel: process.env.IMAGE_MODEL || undefined,
+    },
+    search: {
+      /** Comma-separated sites the web search skill may use; "*" searches the whole web. */
+      domains: parseDomains(process.env.SEARCH_DOMAINS),
+      /** OpenRouter search engine. Must support domain filtering (exa, parallel). */
+      engine: process.env.SEARCH_ENGINE || 'exa',
+      maxResults: 5,
     },
   };
 

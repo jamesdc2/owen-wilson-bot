@@ -14,6 +14,7 @@ A Discord bot for a friend group: Owen Wilson GIFs on keywords, a few slash comm
 - **AI chat**: `@bot <message>` starts a conversation. Reply to the bot's answer to continue it; the Discord reply chain is the context.
 - **Skills**: a small router model decides whether a mention is plain chat or a skill. Current skills:
   - `generate_image` ("@bot draw …").
+  - `web_search` ("@bot who voices Sokka?"): looks facts up on trusted sites and lists its sources.
 
 ## Configuration
 
@@ -27,6 +28,8 @@ All settings are environment variables (a local `.env`, or the Portainer stack).
 | `MODEL` | for AI | Chat model, e.g. `google/gemini-2.5-flash` |
 | `ROUTER_MODEL` | for skills | Small tool-calling model that picks a skill, e.g. `google/gemini-2.5-flash-lite`. Unset sends every mention to chat. |
 | `IMAGE_MODEL` | for images | e.g. `black-forest-labs/flux-3-image-klein`. Unset disables the image skill. |
+| `SEARCH_DOMAINS` | no | Comma-separated sites the search skill may use (wildcards like `*.fandom.com` allowed). Defaults to Wikipedia, Fandom, Reuters, AP News and the Stanford Encyclopedia of Philosophy. `*` searches the whole web. |
+| `SEARCH_ENGINE` | no | OpenRouter search engine: `exa` (default, about $0.007 per search) or `parallel`. Must support domain filtering. |
 | `KEYWORDS_PATH` | no | Path to the keywords file. Defaults to `config/keywords.json`. |
 | `DB_PATH` | no | SQLite database file. Defaults to `data/bot.db`; in Docker, mount a named volume at `/usr/src/bot/data` so it survives redeploys. Created and migrated automatically on startup. |
 | `CRYPTOCOMPARE_API_KEY` | no | Reserved for a future crypto skill |

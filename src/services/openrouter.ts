@@ -106,6 +106,51 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<string> {
     return answer;
 }
 
+export interface WebSearchOptions {
+    /** Only search these sites (wildcards like `*.fandom.com` allowed). Empty searches the whole web. */
+    domains: string[];
+    /** OpenRouter search engine; `exa` and `parallel` support domain filtering (Google native doesn't). */
+    engine: string;
+    maxResults: number;
+}
+
+export interface WebSource {
+    url: string;
+    title: string;
+}
+
+export interface WebSearchAnswer {
+    answer: string;
+    /** Pages the answer cites, deduplicated, in citation order. */
+    sources: WebSource[];
+}
+
+/** Chat model reply grounded in a web search, via OpenRouter's `web` plugin. */
+export async function chatWithWebSearch(messages: ChatMessage[], options: WebSearchOptions): Promise<WebSearchAnswer> {
+    const plugin: Record<string, unknown> = { id: 'web', engine: options.engine, max_results: options.maxResults };
+    if (options.domains.length > 0) plugin.include_domains = options.domains;
+
+    const body = await request('/chat/completions', {
+        body: { model: config.openRouter.model, messages, plugins: [plugin], usage: { include: true } },
+    });
+    logUsage('search', `${config.openRouter.model} + ${options.engine}`, body);
+
+    const message = body?.choices?.[0]?.message;
+    const answer = message?.content;
+    if (typeof answer !== 'string' || !answer.trim()) {
+        throw new Error(`OpenRouter returned no content: ${JSON.stringify(body)}`);
+    }
+
+    const sources: WebSource[] = [];
+    for (const annotation of message.annotations ?? []) {
+        const citation = annotation?.type === 'url_citation' ? annotation.url_citation : null;
+        if (typeof citation?.url !== 'string' || sources.some(s => s.url === citation.url)) continue;
+        sources.push({ url: citation.url, title: typeof citation.title === 'string' ? citation.title : citation.url });
+    }
+
+    return { answer, sources };
+}
+
 /**
  * Asks a model to pick exactly one tool. Returns the first tool call, or null if the model
  * answered in text instead (callers should treat that as "no tool").
