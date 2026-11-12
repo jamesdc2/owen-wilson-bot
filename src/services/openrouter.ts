@@ -40,7 +40,15 @@ async function request(path: string, init: { method?: string; body?: unknown; ti
         signal: AbortSignal.timeout(init.timeoutMs ?? REQUEST_TIMEOUT_MS),
     });
 
-    const body: any = await response.json();
+    // Error pages from proxies (e.g. a 502) may be HTML, not JSON.
+    const text = await response.text();
+    let body: any;
+    try {
+        body = JSON.parse(text);
+    } catch {
+        if (!response.ok) throw new OpenRouterError(response.status, text.slice(0, 300));
+        throw new Error(`OpenRouter returned invalid JSON: ${text.slice(0, 300)}`);
+    }
 
     if (!response.ok) {
         throw new OpenRouterError(response.status, body?.error ?? body);
@@ -51,6 +59,14 @@ async function request(path: string, init: { method?: string; body?: unknown; ti
 export class OpenRouterError extends Error {
     constructor(public readonly status: number, public readonly detail: unknown) {
         super(`OpenRouter ${status}: ${JSON.stringify(detail)}`);
+    }
+}
+
+/** The request succeeded but the model produced nothing usable (e.g. its content filter blocked it). */
+export class EmptyResponseError extends Error {
+    constructor(what: string, public readonly finishReason: string | undefined, body: unknown) {
+        // Trimmed so a format change is easy to diagnose without dumping huge base64 into logs.
+        super(`OpenRouter returned no ${what} (finish_reason: ${finishReason ?? 'none'}): ${JSON.stringify(body).slice(0, 1000)}`);
     }
 }
 
@@ -100,7 +116,7 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<string> {
 
     const answer = body?.choices?.[0]?.message?.content;
     if (typeof answer !== 'string' || !answer.trim()) {
-        throw new Error(`OpenRouter returned no content: ${JSON.stringify(body)}`);
+        throw new EmptyResponseError('content', body?.choices?.[0]?.finish_reason, body);
     }
 
     return answer;
@@ -141,7 +157,7 @@ export async function chatWithWebSearch(messages: ChatMessage[], options: WebSea
     const message = body?.choices?.[0]?.message;
     const answer = message?.content;
     if (typeof answer !== 'string' || !answer.trim()) {
-        throw new Error(`OpenRouter returned no content: ${JSON.stringify(body)}`);
+        throw new EmptyResponseError('content', message?.finish_reason ?? body?.choices?.[0]?.finish_reason, body);
     }
 
     const sources: WebSource[] = [];
@@ -207,8 +223,7 @@ export async function generateImage(prompt: string, aspectRatio?: ImageAspectRat
 
     const image = body?.data?.[0];
     if (typeof image?.b64_json !== 'string') {
-        // Trimmed so a format change is easy to diagnose without dumping huge base64 into logs.
-        throw new Error(`OpenRouter returned no image: ${JSON.stringify(body).slice(0, 1000)}`);
+        throw new EmptyResponseError('image', image?.finish_reason ?? body?.finish_reason, body);
     }
 
     const mediaType = typeof image.media_type === 'string' ? image.media_type : 'image/png';
