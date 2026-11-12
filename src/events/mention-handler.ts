@@ -1,8 +1,9 @@
-import { Message } from 'discord.js';
+import { Message, MessageFlags } from 'discord.js';
 import { EventHandler } from './event-handler';
 import { ChatMessage, chatCompletion, isOpenRouterConfigured } from '../services/openrouter';
 import { RouteDecision, routeMessage, skills } from '../skills';
 import { systemPrompt } from '../prompt';
+import { ERROR_REPLY_TEXTS, errorReply } from './error-reply';
 
 /** Reply-chain context limits: whichever is hit first. The first message and the newest are kept. */
 const MAX_CONTEXT_MESSAGES = 10;
@@ -40,7 +41,6 @@ export function selectContext(newestFirst: ChatMessage[]): ChatMessage[] {
 const DISCORD_MAX_LENGTH = 2000;
 
 const THINKING = '🤔 Thinking...';
-const FAILED = '🤢 Something messed up.';
 
 function log(text: string, message: Message): void {
     const channel = 'name' in message.channel ? `#${message.channel.name}` : 'DM';
@@ -102,7 +102,11 @@ export class MentionHandler implements EventHandler {
             const result = await skill.run(args, { message, prompt, history });
 
             if (result.type === 'reply') {
-                await thinking.edit({ content: result.content, files: result.files ?? [] });
+                await thinking.edit({
+                    content: result.content,
+                    files: result.files ?? [],
+                    flags: result.suppressEmbeds ? MessageFlags.SuppressEmbeds : undefined,
+                });
             } else {
                 // Let the chat model phrase the skill's data in the bot's own voice.
                 const answer = await this.chat(prompt, history, `Result from ${skill.name}:\n${result.data}`);
@@ -111,7 +115,7 @@ export class MentionHandler implements EventHandler {
             log(`${skill.name} done`, message);
         } catch (err) {
             console.error(`${new Date().toISOString()} [mention] failed:`, err);
-            await thinking.edit(FAILED).catch(() => {});
+            await thinking.edit({ content: errorReply(err), files: [] }).catch(() => {});
         }
     }
 
@@ -143,7 +147,7 @@ export class MentionHandler implements EventHandler {
     /** Converts a message from the reply chain into a chat turn, or null to skip it. */
     private toChatMessage(msg: Message, botId: string, currentAuthorId: string): ChatMessage | null {
         if (msg.author.id === botId) {
-            if (msg.content === THINKING || msg.content === FAILED) return null;
+            if (msg.content === THINKING || ERROR_REPLY_TEXTS.has(msg.content)) return null;
             // Image replies are a caption plus attachment; note the image so follow-ups make sense.
             const content = msg.attachments.size > 0 ? `${msg.content} [image attached]`.trim() : msg.content;
             return content ? { role: 'assistant', content } : null;
