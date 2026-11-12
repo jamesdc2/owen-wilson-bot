@@ -1,4 +1,4 @@
-import { Message } from 'discord.js';
+import { Message, MessageFlags } from 'discord.js';
 import { EventHandler } from './event-handler';
 import { ChatMessage, chatCompletion, isOpenRouterConfigured } from '../services/openrouter';
 import { RouteDecision, routeMessage, skills } from '../skills';
@@ -102,7 +102,11 @@ export class MentionHandler implements EventHandler {
             const result = await skill.run(args, { message, prompt, history });
 
             if (result.type === 'reply') {
-                await thinking.edit({ content: result.content, files: result.files ?? [] });
+                await thinking.edit({
+                    content: result.content,
+                    files: result.files ?? [],
+                    flags: result.suppressEmbeds ? MessageFlags.SuppressEmbeds : undefined,
+                });
             } else {
                 // Let the chat model phrase the skill's data in the bot's own voice.
                 const answer = await this.chat(prompt, history, `Result from ${skill.name}:\n${result.data}`);

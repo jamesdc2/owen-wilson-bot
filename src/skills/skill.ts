@@ -16,7 +16,14 @@ export interface SkillContext {
  * - `context`: data for the chat model to turn into a reply in the bot's voice (e.g. prices).
  */
 export type SkillResult =
-    | { type: 'reply'; content: string; files?: { attachment: Buffer; name: string }[]; summary: string }
+    | {
+        type: 'reply';
+        content: string;
+        files?: { attachment: Buffer; name: string }[];
+        summary: string;
+        /** Turn off link previews for the whole message (e.g. search answers full of links). */
+        suppressEmbeds?: boolean;
+    }
     | { type: 'context'; data: string };
 
 export interface Skill {

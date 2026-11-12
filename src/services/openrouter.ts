@@ -112,6 +112,8 @@ export interface WebSearchOptions {
     /** OpenRouter search engine; `exa` and `parallel` support domain filtering (Google native doesn't). */
     engine: string;
     maxResults: number;
+    /** Replaces OpenRouter's default text introducing the results (which asks for inline domain-named citations). */
+    searchPrompt?: string;
 }
 
 export interface WebSource {
@@ -129,6 +131,7 @@ export interface WebSearchAnswer {
 export async function chatWithWebSearch(messages: ChatMessage[], options: WebSearchOptions): Promise<WebSearchAnswer> {
     const plugin: Record<string, unknown> = { id: 'web', engine: options.engine, max_results: options.maxResults };
     if (options.domains.length > 0) plugin.include_domains = options.domains;
+    if (options.searchPrompt) plugin.search_prompt = options.searchPrompt;
 
     const body = await request('/chat/completions', {
         body: { model: config.openRouter.model, messages, plugins: [plugin], usage: { include: true } },
